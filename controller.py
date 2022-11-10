@@ -34,6 +34,46 @@ def readTableRules(p4info_helper, sw):
             print(entry)
             print('-----')
 
+
+def writeTunnelRules(p4info_helper, ingress_sw, egress_sw, tunnel_id,
+                     dst_eth_addr, dst_ip_addr):
+    table_entry = p4info_helper.buildTableEntry(
+        table_name="MyIngress.ipv4_lpm",
+        match_fields={
+            "hdr.ipv4.dstAddr": (dst_ip_addr, 32)
+        },
+        action_name="MyIngress.myTunnel_ingress",
+        action_params={
+            "dst_id": tunnel_id,
+        })
+    ingress_sw.WriteTableEntry(table_entry)
+    print("Installed ingress tunnel rule on %s" % ingress_sw.name)
+
+    table_entry = p4info_helper.buildTableEntry(
+        table_name="MyIngress.myTunnel_exact",
+        match_fields={
+            "hdr.myTunnel.dst_id": tunnel_id
+        },
+        action_name="MyIngress.myTunnel_forward",
+        action_params={
+            "port": SWITCH_TO_SWITCH_PORT
+        })
+    ingress_sw.WriteTableEntry(table_entry)
+    print("Installed transit tunnel rule on %s" % ingress_sw.name)
+
+    table_entry = p4info_helper.buildTableEntry(
+        table_name="MyIngress.myTunnel_exact",
+        match_fields={
+            "hdr.myTunnel.dst_id": tunnel_id
+        },
+        action_name="MyIngress.myTunnel_egress",
+        action_params={
+            "dstAddr": dst_eth_addr,
+            "port": SWITCH_TO_HOST_PORT
+        })
+    egress_sw.WriteTableEntry(table_entry)
+    print("Installed egress tunnel rule on %s" % egress_sw.name)
+
 def main(p4info_file_path, bmv2_file_path):
     # Instantiate a P4Runtime helper from the p4info file
     p4info_helper = p4runtime_lib.helper.P4InfoHelper(p4info_file_path)
@@ -69,7 +109,10 @@ def main(p4info_file_path, bmv2_file_path):
     s3.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
     s4.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
 
-    ShutdownAllSwitchConnections()
+    writeTunnelRules(p4info_helper, ingress_sw=s1, egress_sw=s2, tunnel_id=100, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2")
+    writeTunnelRules(p4info_helper, ingress_sw=s2, egress_sw=s1, tunnel_id=200, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1")
+
+    # ShutdownAllSwitchConnections()
     print("close all switches connection, mininet 'h1 ping h2' stucks.")
 
 
