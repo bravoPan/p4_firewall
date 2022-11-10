@@ -109,8 +109,8 @@ def main(p4info_file_path, bmv2_file_path):
     s3.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
     s4.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
 
-    writeTunnelRules(p4info_helper, ingress_sw=s1, egress_sw=s2, tunnel_id=100, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2")
-    writeTunnelRules(p4info_helper, ingress_sw=s2, egress_sw=s1, tunnel_id=200, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1")
+    writeTunnelRules(p4info_helper, ingress_sw=s1, egress_sw=s2, tunnel_id=100, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2/24")
+    writeTunnelRules(p4info_helper, ingress_sw=s2, egress_sw=s1, tunnel_id=200, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1/24")
 
     # ShutdownAllSwitchConnections()
     print("close all switches connection, mininet 'h1 ping h2' stucks.")
