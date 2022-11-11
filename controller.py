@@ -49,7 +49,7 @@ def writeTunnelRules(p4info_helper, ingress_sw, dst_eth_addr, dst_ip_addr, port)
     # Write ingress rule
     table_entry = p4info_helper.buildTableEntry(
         table_name="MyIngress.ipv4_lpm",
-        match_field={
+        match_fields={
             "hdr.ipv4.dstAddr": (dst_ip_addr, 32)
         },
         action_name="MyIngress.ipv4_forward",
