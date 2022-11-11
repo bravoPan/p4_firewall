@@ -124,19 +124,22 @@ def main(p4info_file_path, bmv2_file_path):
 
     s1.MasterArbitrationUpdate()
     s2.MasterArbitrationUpdate()
-    s3.MasterArbitrationUpdate()
-    s4.MasterArbitrationUpdate()
+    # s3.MasterArbitrationUpdate()
+    # s4.MasterArbitrationUpdate()
 
     s1.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
     s2.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
-    s3.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
-    s4.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
+    # s3.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
+    # s4.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
 
     # setup the connection from s1 to s2
     writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=32)
     # setup the connection from s2 to s1
     writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=32)
     # writeTunnelRules(p4info_helper, ingress_sw=s2, egress_sw=s1, tunnel_id=200, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1/24")
+
+    readTableRules(p4info_helper, s1)
+    readTableRules(p4info_helper, s2)
 
     # ShutdownAllSwitchConnections()
     print("close all switches connection, mininet 'h1 ping h2' stucks.")
