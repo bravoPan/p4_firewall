@@ -100,12 +100,12 @@ def main(p4info_file_path, bmv2_file_path):
         proto_dump_file='logs/s4-p4runtime-requests.txt')
 
     s1.MasterArbitrationUpdate()
-    s2.MasterArbitrationUpdate()
+    # s2.MasterArbitrationUpdate()
     # s3.MasterArbitrationUpdate()
     # s4.MasterArbitrationUpdate()
 
     s1.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
-    s2.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
+    # s2.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
 
 
     deleteTableEntry(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2)
