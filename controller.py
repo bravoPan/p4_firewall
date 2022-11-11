@@ -100,7 +100,7 @@ def main(p4info_file_path, bmv2_file_path):
         proto_dump_file='logs/s4-p4runtime-requests.txt')
 
     s1.MasterArbitrationUpdate()
-    # s2.MasterArbitrationUpdate()
+    s2.MasterArbitrationUpdate()
     # s3.MasterArbitrationUpdate()
     # s4.MasterArbitrationUpdate()
 
@@ -117,6 +117,7 @@ def main(p4info_file_path, bmv2_file_path):
     writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=1)
 
     deleteTableEntry(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2)
+    deleteTableEntry(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=2)
 
 
     # readTableRules(p4info_helper, s1)
