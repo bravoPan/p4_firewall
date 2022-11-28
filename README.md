@@ -62,7 +62,7 @@ The corresponding build drop entry in the controller is implemented as:
 
 
 ## Test Instruction (developing)
-
+0. make sure you are in the p4 virtual machine build by [vagrant](https://github.com/p4lang/tutorials)@p4 account.
 1. run `make` to install the table in topo for switches.
-2. use command `h1 ping h2` in the `mininet` to set up the connection between h1,h2 switches as the example, this should also work for any switches between h1 to h4.
-3. run `sudo python3 controller.py` to disconnect the h1, h2, you should see there's no counter flashing in the mininet anymore. while if you `h1 ping h3`, the tunnel 200 should be updated.
+2. use command `h1 ping h2` in the `mininet` to set up the connection between h1,h2 switches as the example, this should also work for any switches between h1 to h3.
+3. run `sudo python3 controller.py` to simulate malicious request sent from h1 to h2, you should see there's no counter update for tunnel id 100 flashing in the mininet anymore. while if you `h1 ping h3`, the tunnel 200 should be updated.
