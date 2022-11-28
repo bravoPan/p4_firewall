@@ -2,3 +2,4 @@ build/
 logs/
 pcaps/
 .DS_Store
+__pycache__
