@@ -3,6 +3,8 @@
 #include <v1model.p4>
 
 const bit<16> TYPE_IPV4 = 0x800;
+const bit<32> MAX_TUNNEL_ID = 1 << 16;
+
 
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
@@ -37,8 +39,15 @@ struct metadata {
     /* empty */
 }
 
+header myTunnel_t {
+    bit<16> proto_id;
+    bit<16> dst_id;
+}
+
+
 struct headers {
     ethernet_t   ethernet;
+    myTunnel_t   myTunnel;
     ipv4_t       ipv4;
 }
 
@@ -86,16 +95,23 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
+
+    counter(MAX_TUNNEL_ID, CounterType.packets_and_bytes) ingressTunnelCounter;
+
+
     action drop() {
         mark_to_drop(standard_metadata);
     }
 
-    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
+    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port, bit<16> dst_id) {
         standard_metadata.egress_spec = port;
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        hdr.myTunnel.dst_id = dst_id;
+        ingressTunnelCounter.count((bit<32>) hdr.myTunnel.dst_id);
     }
+
 
     table ipv4_lpm {
         key = {

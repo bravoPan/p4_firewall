@@ -34,68 +34,59 @@ def readTableRules(p4info_helper, sw):
             print(entry)
             print('-----')
 
+def printCounter(p4info_helper, sw, counter_name, index):
 
-def writeTunnelRules(p4info_helper, ingress_sw, dst_eth_addr, dst_ip_addr, port):
+    for response in sw.ReadCounters(p4info_helper.get_counters_id(counter_name), index):
+        for entity in response.entities:
+            counter = entity.counter_entry
+            print("%s %s %d: %d packets (%d bytes)" % (
+                sw.name, counter_name, index,
+                counter.data.packet_count, counter.data.byte_count
+            ))
 
-    # Write drop rule
-    table_entry = p4info_helper.buildTableEntry(
-        table_name="MyIngress.ipv4_lpm",
-        default_action=True,
-        action_name="MyIngress.drop",
-        action_params= {}
-    )
-    ingress_sw.WriteTableEntry(table_entry)
+
+def writeTunnelRules(p4info_helper, ingress_sw, dst_eth_addr, dst_ip_addr, port, dst_id):
 
     # Write ingress rule
     table_entry = p4info_helper.buildTableEntry(
         table_name="MyIngress.ipv4_lpm",
-        match_field={
+        match_fields={
             "hdr.ipv4.dstAddr": (dst_ip_addr, 32)
         },
         action_name="MyIngress.ipv4_forward",
         action_params={
             "dstAddr": dst_eth_addr,
-            "port": port
+            "port": port,
+            "dst_id": dst_id
         }
     )
     ingress_sw.WriteTableEntry(table_entry)
-    
-    # table_entry = p4info_helper.buildTableEntry(
-    #     table_name="MyIngress.ipv4_lpm",
-    #     match_fields={
-    #         "hdr.ipv4.dstAddr": (dst_ip_addr, 32)
-    #     },
-    #     action_name="MyIngress.myTunnel_ingress",
-    #     action_params={
-    #         "dst_id": tunnel_id,
-    #     })
-    # ingress_sw.WriteTableEntry(table_entry)
-    # print("Installed ingress tunnel rule on %s" % ingress_sw.name)
 
-    # table_entry = p4info_helper.buildTableEntry(
-    #     table_name="MyIngress.myTunnel_exact",
-    #     match_fields={
-    #         "hdr.myTunnel.dst_id": tunnel_id
-    #     },
-    #     action_name="MyIngress.myTunnel_forward",
-    #     action_params={
-    #         "port": SWITCH_TO_SWITCH_PORT
-    #     })
-    # ingress_sw.WriteTableEntry(table_entry)
-    # print("Installed transit tunnel rule on %s" % ingress_sw.name)
+def deleteTableEntry(p4info_helper, ingress_sw, dst_eth_addr, dst_ip_addr, port, dst_id):
+    table_entry = p4info_helper.buildTableEntry(
+        table_name="MyIngress.ipv4_lpm",
+        match_fields={
+            "hdr.ipv4.dstAddr": (dst_ip_addr, 32)
+        },
+        action_name="MyIngress.ipv4_forward",
+        action_params={
+            "dstAddr": dst_eth_addr,
+            "port": port,
+            "dst_id": dst_id
+        }
+    )
+    ingress_sw.DeleteTableEntry(table_entry, False)
 
-    # table_entry = p4info_helper.buildTableEntry(
-    #     table_name="MyIngress.myTunnel_exact",
-    #     match_fields={
-    #         "hdr.myTunnel.dst_id": tunnel_id
-    #     },
-    #     action_name="MyIngress.myTunnel_egress",
-    #     action_params={
-    #         "dstAddr": dst_eth_addr,
-    #         "port": SWITCH_TO_HOST_PORT
-    #     })
-    # egress_sw.WriteTableEntry(table_entry)
-    # print("Installed egress tunnel rule on %s" % egress_sw.name)
+    # Change to drop func
+    table_entry = p4info_helper.buildTableEntry(
+        table_name="MyIngress.ipv4_lpm",
+        match_fields={
+            "hdr.ipv4.dstAddr": (dst_ip_addr, 32)
+        },
+        action_name="MyIngress.drop"
+    )
+    ingress_sw.WriteTableEntry(table_entry)
+
 
 def main(p4info_file_path, bmv2_file_path):
     # Instantiate a P4Runtime helper from the p4info file
@@ -116,29 +107,35 @@ def main(p4info_file_path, bmv2_file_path):
         address='127.0.0.1:50053',
         device_id=2,
         proto_dump_file='logs/s3-p4runtime-requests.txt')
-    s4 = p4runtime_lib.bmv2.Bmv2SwitchConnection(
-        name='s4',
-        address='127.0.0.1:50054',
-        device_id=3,
-        proto_dump_file='logs/s4-p4runtime-requests.txt')
 
     s1.MasterArbitrationUpdate()
     s2.MasterArbitrationUpdate()
     s3.MasterArbitrationUpdate()
-    s4.MasterArbitrationUpdate()
 
     s1.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
     s2.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
     s3.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
-    s4.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
 
     # setup the connection from s1 to s2
-    writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=32)
+    writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=100)
+    writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=200)
+
+
+
     # setup the connection from s2 to s1
-    writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=32)
+    writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=400)
     # writeTunnelRules(p4info_helper, ingress_sw=s2, egress_sw=s1, tunnel_id=200, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1/24")
 
     # ShutdownAllSwitchConnections()
+    readTableRules(p4info_helper, s1)
+    while True:
+        sleep(2)
+        printCounter(p4info_helper, s1, "MyIngress.ingressTunnelCounter", 100)
+        printCounter(p4info_helper, s1, "MyIngress.ingressTunnelCounter", 200)
+        printCounter(p4info_helper, s2, "MyIngress.ingressTunnelCounter", 400)
+        sleep(5)
+        deleteTableEntry(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=100)
+
     print("close all switches connection, mininet 'h1 ping h2' stucks.")
 
 
