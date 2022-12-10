@@ -26,16 +26,57 @@ def readTableRules(p4info_helper, sw):
     :param sw: the switch connection
     """
     print('\n----- Reading tables rules for %s -----' % sw.name)
+    data_table = []
+
     for response in sw.ReadTableEntries():
         for entity in response.entities:
+            cur_table = []
+
             entry = entity.table_entry
-            # TODO For extra credit, you can use the p4info_helper to translate
-            #      the IDs in the entry to names
-            print(entry)
-            print('-----')
+
+            table_name = p4info_helper.get_tables_name(entry.table_id)
+            for m in entry.match:
+
+
+                ipv4_dst_addr, ipv4_port = p4info_helper.get_match_field_value(m)
+                if ipv4_dst_addr == b'\n\x00\x01\x01':
+                    cur_table.append("h1")
+                if ipv4_dst_addr == b'\n\x00\x02\x02':
+                    cur_table.append("s2")
+                if ipv4_dst_addr == b'\n\x00\x03\x03':
+                    cur_table.append("s3")
+
+
+                # print(p4info_helper.get_match_field_name(table_name, m.field_id), end=' ')
+
+                # ipv4_dst_addr = ipv4_dst_addr
+
+                    # print("s1", end=' ')
+                # ipv4_port = ipv4_port.decode('utf-8')
+                # print((ipv4_dst_addr), end=' ')
+                # print('%r' % (.decode("utf-8"),), end=' ')
+            action = entry.action.action
+            # print(action)
+
+            action_name = p4info_helper.get_actions_name(action.action_id)
+            # print(action.params)
+            # for p in action.params:
+            #     print(p)
+            #     print(p.value)
+                # print(p4info_helper.get_action_param_name(action_name, p.param_id))
+                # print()
+            # print(p4info_helper.get_action_param_pb(action_name, "port", ))
+            cur_table.append(action_name)
+            data_table.append(cur_table)
+            # print('->', action_name, end=' ')
+            # for p in action.params:
+            #     print(p4info_helper.get_action_param_name(action_name, p.param_id), end=' ')
+            #     print('%r' % p.value, end=' ')
+            print()
+    print(data_table)
 
 def printCounter(p4info_helper, sw, counter_name, index):
-
+    # print(sw.ReadCounters(p4info_helper.get_counters_id(counter_name), index))
     for response in sw.ReadCounters(p4info_helper.get_counters_id(counter_name), index):
         for entity in response.entities:
             counter = entity.counter_entry
@@ -43,7 +84,6 @@ def printCounter(p4info_helper, sw, counter_name, index):
                 sw.name, counter_name, index,
                 counter.data.packet_count, counter.data.byte_count
             ))
-
 
 def writeTunnelRules(p4info_helper, ingress_sw, dst_eth_addr, dst_ip_addr, port, dst_id):
 
@@ -116,25 +156,34 @@ def main(p4info_file_path, bmv2_file_path):
     s2.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
     s3.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
 
-    # setup the connection from s1 to s2
-    writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=100)
-    writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=200)
+    # setup the connection for s1
+    writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=1, dst_id=100)
+    writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=200)
+    writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=300)
 
-
-
-    # setup the connection from s2 to s1
-    writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=400)
+    # setup the connection for s2
+    writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=1, dst_id=400)
+    writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=500)
+    writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=600)
     # writeTunnelRules(p4info_helper, ingress_sw=s2, egress_sw=s1, tunnel_id=200, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1/24")
 
+    # setup the connection for s3
+    writeTunnelRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=1, dst_id=700)
+    writeTunnelRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=800)
+    writeTunnelRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=900)
+
+
     # ShutdownAllSwitchConnections()
+    # readTableRules(p4info_helper, s1)
+    # printCounter(p4info_helper, s1, "MyIngress.ingressTunnelCounter", 100)
+    deleteTableEntry(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=200)
     readTableRules(p4info_helper, s1)
-    while True:
-        sleep(2)
-        printCounter(p4info_helper, s1, "MyIngress.ingressTunnelCounter", 100)
-        printCounter(p4info_helper, s1, "MyIngress.ingressTunnelCounter", 200)
-        printCounter(p4info_helper, s2, "MyIngress.ingressTunnelCounter", 400)
-        sleep(5)
-        deleteTableEntry(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=100)
+    # while True:
+    #     sleep(2)
+    #     printCounter(p4info_helper, s1, "MyIngress.ingressTunnelCounter", 100)
+    #     printCounter(p4info_helper, s1, "MyIngress.ingressTunnelCounter", 200)
+    #     printCounter(p4info_helper, s2, "MyIngress.ingressTunnelCounter", 400)
+        # sleep(5)
 
     print("close all switches connection, mininet 'h1 ping h2' stucks.")
 

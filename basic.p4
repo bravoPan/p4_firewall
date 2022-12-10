@@ -72,6 +72,14 @@ parser MyParser(packet_in packet,
         }
     }
 
+    state parse_myTunnel {
+    packet.extract(hdr.myTunnel);
+    transition select(hdr.myTunnel.proto_id) {
+        TYPE_IPV4: parse_ipv4;
+        default: accept;
+        }
+    }
+
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition accept;
@@ -126,9 +134,31 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
 
+    action myTunnel_forward(egressSpec_t port) {
+        standard_metadata.egress_spec = port;
+    }
+
+    table myTunnel_exact {
+        key = {
+            hdr.myTunnel.dst_id: exact;
+        }
+        actions = {
+            myTunnel_forward;
+            drop;
+        }
+        size = 1024;
+        default_action = drop();
+    }
+
     apply {
-        if (hdr.ipv4.isValid()) {
+        if (hdr.ipv4.isValid() && !hdr.myTunnel.isValid()) {
+            // Process only non-tunneled IPv4 packets
             ipv4_lpm.apply();
+        }
+
+        if (hdr.myTunnel.isValid()) {
+            // process tunneled packets
+            myTunnel_exact.apply();
         }
     }
 }
