@@ -2,6 +2,8 @@
 import argparse
 import os
 import sys
+import threading
+import socket
 from time import sleep
 
 import grpc
@@ -18,6 +20,29 @@ from p4runtime_lib.switch import ShutdownAllSwitchConnections
 
 SWITCH_TO_HOST_PORT = 1
 SWITCH_TO_SWITCH_PORT = 2
+
+# define color for printing on console
+CRED = '\033[91m'
+CEND = '\033[0m'
+CGREEN = '\033[32m'
+
+s1_connection_metadata = {
+    "h1": {
+        "dst_eth_addr": "08:00:00:00:01:11",
+        "dst_ipv4_addr": "10.0.1.1",
+        "port": 1
+    },
+    "s2": {
+        "dst_eth_addr": "08:00:00:00:02:22",
+        "dst_ipv4_addr": "10.0.2.2",
+        "port": 2
+    },
+    "s3": {
+        "dst_eth_addr": "08:00:00:00:03:33",
+        "dst_ipv4_addr": "10.0.3.3",
+        "port": 3
+    }
+}
 
 def readTableRules(p4info_helper, sw):
     """
@@ -37,46 +62,30 @@ def readTableRules(p4info_helper, sw):
             table_name = p4info_helper.get_tables_name(entry.table_id)
             for m in entry.match:
 
-
                 ipv4_dst_addr, ipv4_port = p4info_helper.get_match_field_value(m)
                 if ipv4_dst_addr == b'\n\x00\x01\x01':
-                    cur_table.append("h1")
+                    cur_table  += ["h1", s1_connection_metadata["h1"]["dst_eth_addr"], s1_connection_metadata["h1"]["dst_ipv4_addr"], s1_connection_metadata["h1"]["port"]]
                 if ipv4_dst_addr == b'\n\x00\x02\x02':
-                    cur_table.append("s2")
+                    cur_table += ["s2", s1_connection_metadata["s2"]["dst_eth_addr"], s1_connection_metadata["s2"]["dst_ipv4_addr"], s1_connection_metadata["s2"]["port"]]
                 if ipv4_dst_addr == b'\n\x00\x03\x03':
-                    cur_table.append("s3")
+                    cur_table += ["s3", s1_connection_metadata["s3"]["dst_eth_addr"], s1_connection_metadata["s3"]["dst_ipv4_addr"], s1_connection_metadata["s3"]["port"]]
 
-
-                # print(p4info_helper.get_match_field_name(table_name, m.field_id), end=' ')
-
-                # ipv4_dst_addr = ipv4_dst_addr
-
-                    # print("s1", end=' ')
-                # ipv4_port = ipv4_port.decode('utf-8')
-                # print((ipv4_dst_addr), end=' ')
-                # print('%r' % (.decode("utf-8"),), end=' ')
             action = entry.action.action
-            # print(action)
-
             action_name = p4info_helper.get_actions_name(action.action_id)
-            # print(action.params)
-            # for p in action.params:
-            #     print(p)
-            #     print(p.value)
-                # print(p4info_helper.get_action_param_name(action_name, p.param_id))
-                # print()
-            # print(p4info_helper.get_action_param_pb(action_name, "port", ))
-            cur_table.append(action_name)
+
+            if action_name == "MyIngress.ipv4_forward":
+                cur_table.append(CGREEN+"connected"+CEND)
+            if action_name == "MyIngress.drop":
+                cur_table.append(CRED+"disconnected"+CEND)
             data_table.append(cur_table)
-            # print('->', action_name, end=' ')
-            # for p in action.params:
-            #     print(p4info_helper.get_action_param_name(action_name, p.param_id), end=' ')
-            #     print('%r' % p.value, end=' ')
-            print()
-    print(data_table)
+
+    # print in table format
+    print("switch", "dst_eth_addr", "dst_ipv4_addr", "port", "connection")
+    for switch, dst_eth_addr, dst_ipv4, port, connection in data_table:
+        print(switch, dst_eth_addr, dst_ipv4, port, connection)
+    print()
 
 def printCounter(p4info_helper, sw, counter_name, index):
-    # print(sw.ReadCounters(p4info_helper.get_counters_id(counter_name), index))
     for response in sw.ReadCounters(p4info_helper.get_counters_id(counter_name), index):
         for entity in response.entities:
             counter = entity.counter_entry
@@ -102,7 +111,7 @@ def writeTunnelRules(p4info_helper, ingress_sw, dst_eth_addr, dst_ip_addr, port,
     )
     ingress_sw.WriteTableEntry(table_entry)
 
-def deleteTableEntry(p4info_helper, ingress_sw, dst_eth_addr, dst_ip_addr, port, dst_id):
+def blockTableEntry(p4info_helper, ingress_sw, dst_eth_addr, dst_ip_addr, port, dst_id):
     table_entry = p4info_helper.buildTableEntry(
         table_name="MyIngress.ipv4_lpm",
         match_fields={
@@ -127,6 +136,20 @@ def deleteTableEntry(p4info_helper, ingress_sw, dst_eth_addr, dst_ip_addr, port,
     )
     ingress_sw.WriteTableEntry(table_entry)
 
+def listen_from_sender(p4info_helper, ingress_sw, block_switch_info):
+    UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    UDPServerSocket.bind(("127.0.0.1", 20001))
+    while True:
+        bytesAddressPair = UDPServerSocket.recvfrom(1024)
+        if bytesAddressPair[0] == b'1':
+            blockTableEntry(p4info_helper, ingress_sw, block_switch_info["dst_eth_addr"], block_switch_info["dst_ip_addr"], block_switch_info["port"], block_switch_info["dst_id"])
+            print(CRED+ingress_sw.name+" disconnects "+" s2"+CEND)
+            break
+
+def print_table(p4info_helper, sw):
+    while True:
+        sleep(2)
+        readTableRules(p4info_helper, sw)
 
 def main(p4info_file_path, bmv2_file_path):
     # Instantiate a P4Runtime helper from the p4info file
@@ -165,28 +188,26 @@ def main(p4info_file_path, bmv2_file_path):
     writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=1, dst_id=400)
     writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=500)
     writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=600)
-    # writeTunnelRules(p4info_helper, ingress_sw=s2, egress_sw=s1, tunnel_id=200, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1/24")
 
     # setup the connection for s3
     writeTunnelRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=1, dst_id=700)
     writeTunnelRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=800)
     writeTunnelRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=900)
 
+    block_switch_info = {
+        "dst_eth_addr": s1_connection_metadata["s2"]["dst_eth_addr"],
+        "dst_ip_addr": s1_connection_metadata["s2"]["dst_ipv4_addr"],
+        "port": s1_connection_metadata["s2"]["port"],
+        "dst_id": 200
 
-    # ShutdownAllSwitchConnections()
-    # readTableRules(p4info_helper, s1)
-    # printCounter(p4info_helper, s1, "MyIngress.ingressTunnelCounter", 100)
-    deleteTableEntry(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=200)
-    readTableRules(p4info_helper, s1)
-    # while True:
-    #     sleep(2)
-    #     printCounter(p4info_helper, s1, "MyIngress.ingressTunnelCounter", 100)
-    #     printCounter(p4info_helper, s1, "MyIngress.ingressTunnelCounter", 200)
-    #     printCounter(p4info_helper, s2, "MyIngress.ingressTunnelCounter", 400)
-        # sleep(5)
+    }
+    t1 = threading.Thread(target=listen_from_sender, args=(p4info_helper, s1, block_switch_info))
+    t2 = threading.Thread(target=print_table, args=(p4info_helper, s1))
+    t1.start()
+    t2.start()
 
-    print("close all switches connection, mininet 'h1 ping h2' stucks.")
-
+    t1.join()
+    t2.join()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='P4Runtime Controller')

@@ -59,10 +59,16 @@ The corresponding build drop entry in the controller is implemented as:
     )
     ingress_sw.WriteTableEntry(table_entry)
 ```
+### DNS Server
+We do not implement the real dns server. Instead, We use the socket `gethostbyname` method to get the ipv4 address of the host `h2` and `h3`. Before that, we changed the file `/etc/hosts` where added the map between host name to ipv4 addresses.
 
 
 ## Test Instruction (developing)
 0. make sure you are in the p4 virtual machine build by [vagrant](https://github.com/p4lang/tutorials)@p4 account.
 1. run `make` to install the table in topo for switches.
-2. use command `h1 ping h2` in the `mininet` to set up the connection between h1,h2 switches as the example, this should also work for any switches between h1 to h3.
-3. run `sudo python3 controller.py` to simulate malicious request sent from h1 to h2, you should see there's no counter update for tunnel id 100 flashing in the mininet anymore. while if you `h1 ping h3`, the tunnel 200 should be updated.
+2. run `sudo python3 controller.py` to build the topology for the switches and host machines in mininet by p4runtime.
+3. run `xterm h1 h2 h3` to create 3 consoles for `h1`, `h2` and `h3`.
+4. at `h2` and `h3` console, run `sudo python3 receive.py`.
+5. before blocking any switch, use `sudo python3 send h2/h3 'i love p4'` should appear packet info at `h2/h3` console, and the connections are green in the `controller.py`.
+6. then we run `python3 block.py h2` in another bash terminal, it should suddenly see that `s1 disconnects s2` in the `controller.py` and the connection becomes red between `s2`.
+7. in the `h1` xterm console, we cannot send to `h2`, but `h3` should work fine.
