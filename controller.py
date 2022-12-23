@@ -32,12 +32,12 @@ s1_connection_metadata = {
         "dst_ipv4_addr": "10.0.1.1",
         "port": 1
     },
-    "s2": {
+    "h2": {
         "dst_eth_addr": "08:00:00:00:02:22",
         "dst_ipv4_addr": "10.0.2.2",
         "port": 2
     },
-    "s3": {
+    "h3": {
         "dst_eth_addr": "08:00:00:00:03:33",
         "dst_ipv4_addr": "10.0.3.3",
         "port": 3
@@ -94,7 +94,7 @@ def printCounter(p4info_helper, sw, counter_name, index):
                 counter.data.packet_count, counter.data.byte_count
             ))
 
-def writeTunnelRules(p4info_helper, ingress_sw, dst_eth_addr, dst_ip_addr, port, dst_id):
+def writeTableRules(p4info_helper, ingress_sw, dst_eth_addr, dst_ip_addr, port, dst_id):
 
     # Write ingress rule
     table_entry = p4info_helper.buildTableEntry(
@@ -180,19 +180,19 @@ def main(p4info_file_path, bmv2_file_path):
     s3.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
 
     # setup the connection for s1
-    writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=1, dst_id=100)
-    writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=200)
-    writeTunnelRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=300)
+    writeTableRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=1, dst_id=100)
+    writeTableRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=200)
+    writeTableRules(p4info_helper, ingress_sw=s1, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=300)
 
     # setup the connection for s2
-    writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=1, dst_id=400)
-    writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=500)
-    writeTunnelRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=600)
+    writeTableRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=1, dst_id=400)
+    writeTableRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=500)
+    writeTableRules(p4info_helper, ingress_sw=s2, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=600)
 
     # setup the connection for s3
-    writeTunnelRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=1, dst_id=700)
-    writeTunnelRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=800)
-    writeTunnelRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=900)
+    writeTableRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1", port=1, dst_id=700)
+    writeTableRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:02:22", dst_ip_addr="10.0.2.2", port=2, dst_id=800)
+    writeTableRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=900)
 
     block_switch_info = {
         "dst_eth_addr": s1_connection_metadata["s2"]["dst_eth_addr"],

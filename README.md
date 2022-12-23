@@ -13,7 +13,7 @@ A design for the test scenior is that: suppose `h2` (10.0.2.2) is a malicious ip
 2. run `sudo python3 controller.py` to build the topology for the switches and host machines in mininet by p4runtime.
 3. run `xterm h1 h2 h3` to create 3 consoles for `h1`, `h2` and `h3`.
 4. at `h2` and `h3` console, run `sudo python3 receive.py`.
-5. before blocking any switch, use `sudo python3 send h2/h3 'i love p4'` should appear packet info at `h2/h3` console, and the connections are green in the `controller.py`.
+5. before blocking any switch, use `sudo python3 send.py h2/h3 'i love p4'` should appear packet info at `h2/h3` console, and the connections are green in the `controller.py`.
 6. then we run `python3 block.py h2` in another bash terminal, it should suddenly see that `s1 disconnects s2` in the `controller.py` and the connection becomes red between `s2`.
 7. in the `h1` xterm console, we cannot send to `h2`, but `h3` should work fine.
 
@@ -21,7 +21,7 @@ A design for the test scenior is that: suppose `h2` (10.0.2.2) is a malicious ip
 A few dynamic changes make p4 hard to change the table rules by its native rules. Therefore, we use the p4 runtime as the middleware to 1).delete exist table. 2). change the table rule to drop the packet.
 
 ### Delete Table
-The implementation for deleting the table is achieved by adding another function in `utils/p4runtime_lib`, the basic understanding is to tune to proto buffer type to `DELETE` and rewrite the request in the p4 runtime bmv2 model.
+The implementation for deleting the table is achieved by adding another function in `utils/p4runtime_lib/switch.py`, the basic understanding is to tune to proto buffer type to `DELETE` and rewrite the request in the p4 runtime bmv2 model.
 
 ```
     def DeleteTableEntry(self, table_entry, dry_run=False):
