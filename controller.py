@@ -66,9 +66,9 @@ def readTableRules(p4info_helper, sw):
                 if ipv4_dst_addr == b'\n\x00\x01\x01':
                     cur_table  += ["h1", s1_connection_metadata["h1"]["dst_eth_addr"], s1_connection_metadata["h1"]["dst_ipv4_addr"], s1_connection_metadata["h1"]["port"]]
                 if ipv4_dst_addr == b'\n\x00\x02\x02':
-                    cur_table += ["s2", s1_connection_metadata["s2"]["dst_eth_addr"], s1_connection_metadata["s2"]["dst_ipv4_addr"], s1_connection_metadata["s2"]["port"]]
+                    cur_table += ["h2", s1_connection_metadata["h2"]["dst_eth_addr"], s1_connection_metadata["h2"]["dst_ipv4_addr"], s1_connection_metadata["h2"]["port"]]
                 if ipv4_dst_addr == b'\n\x00\x03\x03':
-                    cur_table += ["s3", s1_connection_metadata["s3"]["dst_eth_addr"], s1_connection_metadata["s3"]["dst_ipv4_addr"], s1_connection_metadata["s3"]["port"]]
+                    cur_table += ["h3", s1_connection_metadata["h3"]["dst_eth_addr"], s1_connection_metadata["h3"]["dst_ipv4_addr"], s1_connection_metadata["h3"]["port"]]
 
             action = entry.action.action
             action_name = p4info_helper.get_actions_name(action.action_id)
@@ -195,9 +195,9 @@ def main(p4info_file_path, bmv2_file_path):
     writeTableRules(p4info_helper, ingress_sw=s3, dst_eth_addr="08:00:00:00:03:33", dst_ip_addr="10.0.3.3", port=3, dst_id=900)
 
     block_switch_info = {
-        "dst_eth_addr": s1_connection_metadata["s2"]["dst_eth_addr"],
-        "dst_ip_addr": s1_connection_metadata["s2"]["dst_ipv4_addr"],
-        "port": s1_connection_metadata["s2"]["port"],
+        "dst_eth_addr": s1_connection_metadata["h2"]["dst_eth_addr"],
+        "dst_ip_addr": s1_connection_metadata["h2"]["dst_ipv4_addr"],
+        "port": s1_connection_metadata["h2"]["port"],
         "dst_id": 200
 
     }
