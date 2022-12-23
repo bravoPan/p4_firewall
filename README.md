@@ -1,6 +1,9 @@
 # Firewall Introduction
 The goal of this project is to design and implement a firewall on the switch level to block malicious packet transmission to the target host ip address.
 
+## Links
+- [Slides](https://docs.google.com/presentation/d/e/2PACX-1vR34U_dEi1h6tlqGXpdISRmFuGV1f35bvppXpVj1oyjQJJwPqCJrc1yMsFZVZtf-g3HbG1wN3U2eyhd/pub?start=true&loop=false&delayms=3000)
+- [Demo Video](https://youtu.be/Ub2DVaiTNm0)
 
 ## Topology Graph
 ![graph](./pod-topo/pod-topo.png)
